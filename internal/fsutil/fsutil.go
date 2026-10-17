@@ -12,6 +12,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -41,15 +42,25 @@ func Backup(path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	rel, err := filepath.Rel(paths.Home(), path)
-	if err != nil || strings.HasPrefix(rel, "..") {
-		rel = strings.TrimLeft(filepath.ToSlash(path), "/:")
-	}
-	dst := filepath.Join(paths.BackupsDir(), runStamp(), rel)
+	dst := filepath.Join(paths.BackupsDir(), runStamp(), backupRel(paths.Home(), path))
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 		return "", err
 	}
 	return dst, os.WriteFile(dst, data, 0o644)
+}
+
+// backupRel maps a file to its place inside a backup folder: relative to home
+// when it lives there, otherwise under "_root/<volume>/…" (a Windows drive
+// letter such as "C:" is not a valid folder name).
+func backupRel(home, path string) string {
+	if rel, err := filepath.Rel(home, path); err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return rel
+	}
+	vol := filepath.VolumeName(path)
+	rest := strings.TrimLeft(path[len(vol):], `/\`)
+	drive := strings.Trim(vol, `:/\`)
+	drive = strings.NewReplacer(`\`, "_", "/", "_", ":", "", "?", "", ".", "_").Replace(drive)
+	return filepath.Join("_root", drive, rest)
 }
 
 // Result says what WriteIfChanged did.
@@ -171,4 +182,45 @@ func CopyTree(src, dst string, skipGit bool) error {
 		}
 		return out.Close()
 	})
+}
+
+// LinkPointsTo reports whether link is a symlink or (on Windows) a directory
+// junction that resolves to target. Go no longer evaluates junctions in
+// filepath.EvalSymlinks, so the link is also read directly.
+func LinkPointsTo(link, target string) bool {
+	want := []string{filepath.Clean(target)}
+	if t, err := filepath.EvalSymlinks(target); err == nil {
+		want = append(want, filepath.Clean(t))
+	}
+	var got []string
+	if t, err := filepath.EvalSymlinks(link); err == nil {
+		got = append(got, filepath.Clean(t))
+	}
+	if t, err := os.Readlink(link); err == nil {
+		if !filepath.IsAbs(t) {
+			t = filepath.Join(filepath.Dir(link), t)
+		}
+		got = append(got, filepath.Clean(strings.TrimPrefix(t, `\??\`)))
+	}
+	for _, g := range got {
+		for _, w := range want {
+			if g == w || (runtime.GOOS == "windows" && strings.EqualFold(g, w)) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// IsLink reports whether p is a symlink or a Windows junction.
+func IsLink(p string) bool {
+	fi, err := os.Lstat(p)
+	if err != nil {
+		return false
+	}
+	if fi.Mode()&os.ModeSymlink != 0 {
+		return true
+	}
+	_, err = os.Readlink(p) // junctions are readable links on Windows
+	return runtime.GOOS == "windows" && err == nil
 }

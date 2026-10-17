@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mewebstudio/conductor-cli/internal/fsutil"
 	"github.com/mewebstudio/conductor-cli/internal/paths"
 )
 
@@ -166,16 +167,13 @@ const (
 // Inspect reports how a project is linked in the vault.
 func Inspect(vault string, p Project, docsDir string) LinkState {
 	link := VaultLink(vault, p.Name)
-	fi, err := os.Lstat(link)
-	if err != nil {
+	if _, err := os.Lstat(link); err != nil {
 		return LinkMissing
 	}
-	target, err := filepath.EvalSymlinks(link)
-	want, err2 := filepath.EvalSymlinks(filepath.Join(p.Path, docsDir))
-	if err == nil && err2 == nil && filepath.Clean(target) == filepath.Clean(want) {
+	if fsutil.LinkPointsTo(link, filepath.Join(p.Path, docsDir)) {
 		return LinkOK
 	}
-	if fi.Mode()&os.ModeSymlink != 0 || isJunction(link) {
+	if fsutil.IsLink(link) {
 		return LinkWrong
 	}
 	return LinkForeign
@@ -214,26 +212,15 @@ func Link(vault string, p Project, docsDir string) error {
 // Unlink removes a project's link from the vault (never the docs themselves).
 func Unlink(vault, name string) error {
 	link := VaultLink(vault, name)
-	fi, err := os.Lstat(link)
-	if errors.Is(err, os.ErrNotExist) {
+	if _, err := os.Lstat(link); errors.Is(err, os.ErrNotExist) {
 		return nil
-	}
-	if err != nil {
+	} else if err != nil {
 		return err
 	}
-	if fi.Mode()&os.ModeSymlink == 0 && !isJunction(link) {
+	if !fsutil.IsLink(link) {
 		return fmt.Errorf("%s is a real folder; not removing it", link)
 	}
 	return os.Remove(link)
-}
-
-// isJunction detects a Windows directory junction (reported as a plain dir).
-func isJunction(p string) bool {
-	if runtime.GOOS != "windows" {
-		return false
-	}
-	target, err := os.Readlink(p)
-	return err == nil && target != ""
 }
 
 // WriteHome regenerates the vault's Home.md index.

@@ -23,16 +23,13 @@ const (
 // Inspect reports what an agent folder holds for a skill.
 func Inspect(agentDir, name, shared string) LinkState {
 	p := filepath.Join(agentDir, name)
-	fi, err := os.Lstat(p)
-	if err != nil {
+	if _, err := os.Lstat(p); err != nil {
 		return Missing
 	}
-	if target, err := filepath.EvalSymlinks(p); err == nil {
-		if s, err := filepath.EvalSymlinks(shared); err == nil && filepath.Clean(target) == filepath.Clean(s) {
-			return Linked
-		}
+	if fsutil.LinkPointsTo(p, shared) {
+		return Linked
 	}
-	if fi.Mode()&os.ModeSymlink == 0 {
+	if !fsutil.IsLink(p) {
 		if _, err := os.Stat(filepath.Join(p, copyMarker)); err == nil {
 			return Copied
 		}
