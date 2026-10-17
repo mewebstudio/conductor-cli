@@ -11,7 +11,7 @@ Task: $ARGUMENTS (if empty, use the request in the conversation).
 **Philosophy:** spend power where it matters; never let the process outgrow the work. Every task ends in something {{who .C}} can try, see or decide on.
 
 ## 1. The lead: {{label .C.Models.Lead.Model}}{{with .C.Models.Lead.Effort}} · {{.}}{{end}} — writes no code
-- **Start check:** if this session is not running {{label .C.Models.Lead.Model}}{{with .C.Models.Lead.Effort}} at {{.}} effort{{end}}, tell {{who .C}} in one line (suggest `/model`) and continue.
+- **Start check:** run `echo $CLAUDE_EFFORT` (Claude Code exposes the session's effort there). If the model is not {{label .C.Models.Lead.Model}}{{with .C.Models.Lead.Effort}} or the effort is not {{.}}{{end}}, tell {{who .C}} in one line (suggest `/model`) and continue.
 - The lead understands the task, splits it, picks a worker for each part, writes the briefs, **verifies** results, merges them, prepares commits and reports.
 {{- if eq .C.Lead.Coding "strict"}}
 - **The lead never edits code or project files.** Every change, however small, goes to a worker. The lead may edit only `{{.C.Docs.Decisions}}` and `{{.C.Docs.Handoff}}`.
