@@ -1,6 +1,7 @@
 name: ci
 on:
   push:
+    branches: ["**"]   # tags are handled by the release workflow
   pull_request:
 jobs:
   test:

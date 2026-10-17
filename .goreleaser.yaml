@@ -17,6 +17,9 @@ checksum:
   name_template: checksums.txt
 changelog:
   use: github
+release:
+  # Reuse a release created by hand on GitHub: keep its notes, add the files.
+  mode: keep-existing
 homebrew_casks:
   - name: conductor-cli
     binaries: [conductor]
