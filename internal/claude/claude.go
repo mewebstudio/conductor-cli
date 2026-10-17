@@ -214,6 +214,7 @@ func applySettings(c *config.Config, hookCmd string) (Change, error) {
 	} else {
 		obj.Set("effortLevel", c.Models.Lead.Effort)
 	}
+	setLeadModelEffort(obj, c.Models.Lead.Model, c.Models.Lead.Effort)
 	if hookCmd != "" {
 		setSyncHook(obj, hookCmd, c.Sync.Auto)
 	}
@@ -226,13 +227,65 @@ func applySettings(c *config.Config, hookCmd string) (Change, error) {
 	return Change{SettingsPath(), res.String()}, err
 }
 
+// leadStatePath remembers which modelSettings entry conductor owns.
+func leadStatePath() string { return filepath.Join(paths.StateDir(), "lead-model") }
+
+// setLeadModelEffort writes modelSettings.<model>.effortLevel. Claude Code
+// ignores the top-level effortLevel in user settings for some models (Opus
+// 5.5 among them) but always honours the per-model entry. The entry conductor
+// wrote for a previous lead model is removed; others are left alone.
+func setLeadModelEffort(settings *ojson.Object, model, effort string) {
+	prev := ""
+	if b, err := os.ReadFile(leadStatePath()); err == nil {
+		prev = strings.TrimSpace(string(b))
+	}
+	mv, _ := settings.Get("modelSettings")
+	ms, ok := mv.(*ojson.Object)
+	if !ok {
+		ms = &ojson.Object{}
+	}
+	clear := func(m string) {
+		ev, _ := ms.Get(m)
+		e, ok := ev.(*ojson.Object)
+		if !ok {
+			return
+		}
+		e.Delete("effortLevel")
+		if len(e.Members) == 0 {
+			ms.Delete(m)
+		}
+	}
+	if prev != "" && prev != model {
+		clear(prev)
+	}
+	if model != "" && effort != "" {
+		ev, _ := ms.Get(model)
+		e, ok := ev.(*ojson.Object)
+		if !ok {
+			e = &ojson.Object{}
+			ms.Set(model, e)
+		}
+		e.Set("effortLevel", effort)
+		_ = os.MkdirAll(paths.StateDir(), 0o755)
+		_ = os.WriteFile(leadStatePath(), []byte(model+"\n"), 0o644)
+	} else {
+		clear(model)
+		_ = os.Remove(leadStatePath())
+	}
+	if len(ms.Members) == 0 {
+		settings.Delete("modelSettings")
+	} else {
+		settings.Set("modelSettings", ms)
+	}
+}
+
 // allowRules let the lead run conductor's own read-only helpers without a
 // permission prompt; nothing else is allowed.
 var allowRules = []string{
 	"Bash(conductor review run *)",
 	"Bash(conductor ask *)",
 	"Bash(conductor notify *)",
-	"Bash(echo $CLAUDE_EFFORT)",
+	"Bash(printenv CLAUDE_EFFORT)",
 }
 
 // setPermissions adds (or removes) conductor's rules in permissions.allow,
@@ -459,6 +512,7 @@ func Uninstall(resetModel bool) ([]Change, error) {
 		if resetModel {
 			obj.Delete("model")
 			obj.Delete("effortLevel")
+			setLeadModelEffort(obj, "", "")
 		}
 		data, err := ojson.Marshal(obj)
 		if err != nil {

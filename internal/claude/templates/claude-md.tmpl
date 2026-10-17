@@ -5,6 +5,6 @@
 {{- else if eq .C.Git.Commit "manual"}}
 - Never commit or push; tell me when work is ready to commit.
 {{- end}}
-- If asked about your effort level, run `echo $CLAUDE_EFFORT`; Claude Code puts the session's effort there.
+- If asked about your effort level, run `printenv CLAUDE_EFFORT`; Claude Code puts the session's effort there.
 - For large or multi-part work, use the `conductor` skill. Run `conductor review run`, `conductor ask` and `conductor notify` yourself with the Bash tool; never ask me to run them.
 - If a project has `{{.C.Docs.Decisions}}`, read it before making design decisions.

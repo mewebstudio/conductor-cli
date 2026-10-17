@@ -142,7 +142,10 @@ func modelsCmd() *cobra.Command {
 				ui.Linef("%s (%s)", name, source)
 				for _, m := range list {
 					eff := strings.Join(m.Efforts, " ")
-					if eff == "" {
+					switch {
+					case m.EffortInName != "":
+						eff = m.EffortInName + " (part of the id)"
+					case eff == "":
 						eff = "-"
 					}
 					old := ""

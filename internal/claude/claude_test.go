@@ -75,6 +75,9 @@ func TestApplyAndUninstallRestoreSettings(t *testing.T) {
 	if !strings.Contains(string(b), `"Bash(conductor review run *)"`) {
 		t.Fatalf("allow rule missing:\n%s", b)
 	}
+	if !strings.Contains(string(b), `"claude-opus-5-5": {`) || !strings.Contains(string(b), `"Bash(printenv CLAUDE_EFFORT)"`) {
+		t.Fatalf("per-model effort or printenv rule missing:\n%s", b)
+	}
 	model, effort, hook, _ := SettingsState()
 	if model != "claude-opus-5-5" || effort != "high" || !hook {
 		t.Fatalf("settings not applied: %s %s %v", model, effort, hook)
@@ -90,7 +93,8 @@ func TestApplyAndUninstallRestoreSettings(t *testing.T) {
 		t.Fatal(err)
 	}
 	got, _ := os.ReadFile(SettingsPath())
-	want := "{\n  \"theme\": \"dark\",\n  \"model\": \"claude-opus-5-5\",\n  \"effortLevel\": \"high\"\n}\n"
+	// Without --reset-model the lead model and effort stay in place.
+	want := "{\n  \"theme\": \"dark\",\n  \"model\": \"claude-opus-5-5\",\n  \"effortLevel\": \"high\",\n  \"modelSettings\": {\n    \"claude-opus-5-5\": {\n      \"effortLevel\": \"high\"\n    }\n  }\n}\n"
 	if string(got) != want {
 		t.Fatalf("settings after uninstall:\n%s", got)
 	}

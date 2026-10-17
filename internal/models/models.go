@@ -29,6 +29,9 @@ type Model struct {
 	Label   string
 	Efforts []string // supported effort levels; empty = no effort control
 	Current bool     // shown in the tool's main list (false = older/overflow)
+	// EffortInName is set when the id itself carries the effort
+	// (Antigravity: gemini-4-argon-high).
+	EffortInName string
 }
 
 // Supports reports whether effort is valid for the model ("" always is).
@@ -58,13 +61,13 @@ var claudeEfforts = []string{"low", "medium", "high", "xhigh", "max"}
 
 // claudeFallback is used when Claude Code's catalog cannot be read.
 var claudeFallback = []Model{
-	{"claude-opus-5-5", "Opus 5.5", claudeEfforts, true},
-	{"claude-sonnet-5-5", "Sonnet 5.5", claudeEfforts, true},
-	{"claude-haiku-5-5", "Haiku 5.5", claudeEfforts, true},
-	{"claude-fable-5-1", "Fable 5.1", claudeEfforts, true},
-	{"claude-opus-5", "Opus 5", claudeEfforts, false},
-	{"claude-sonnet-5", "Sonnet 5", claudeEfforts, false},
-	{"claude-haiku-4-5", "Haiku 4.5", nil, false},
+	{"claude-opus-5-5", "Opus 5.5", claudeEfforts, true, ""},
+	{"claude-sonnet-5-5", "Sonnet 5.5", claudeEfforts, true, ""},
+	{"claude-haiku-5-5", "Haiku 5.5", claudeEfforts, true, ""},
+	{"claude-fable-5-1", "Fable 5.1", claudeEfforts, true, ""},
+	{"claude-opus-5", "Opus 5", claudeEfforts, false, ""},
+	{"claude-sonnet-5", "Sonnet 5", claudeEfforts, false, ""},
+	{"claude-haiku-4-5", "Haiku 4.5", nil, false, ""},
 }
 
 // Claude returns the models Claude Code offers this account, newest catalog
@@ -144,7 +147,7 @@ func withAliases(list []Model) []Model {
 }
 
 var codexFallback = []Model{
-	{"gpt-6.1-sol", "GPT-6.1-Sol", []string{"low", "medium", "high", "xhigh", "max", "ultra"}, true},
+	{"gpt-6.1-sol", "GPT-6.1-Sol", []string{"low", "medium", "high", "xhigh", "max", "ultra"}, true, ""},
 }
 
 // Codex returns the models the Codex CLI lists for your account.
@@ -207,7 +210,13 @@ func Antigravity(ctx context.Context) ([]Model, error) {
 		if label == "" {
 			label = id
 		}
-		list = append(list, Model{ID: id, Label: label, Current: true})
+		m := Model{ID: id, Label: label, Current: true}
+		for _, e := range []string{"low", "medium", "high"} {
+			if strings.HasSuffix(id, "-"+e) {
+				m.EffortInName = e
+			}
+		}
+		list = append(list, m)
 	}
 	return list, nil
 }
