@@ -3,3 +3,6 @@
 /conductor.exe
 *.test
 .DS_Store
+
+# conductor review reports (machine-local)
+/docs/reviews/

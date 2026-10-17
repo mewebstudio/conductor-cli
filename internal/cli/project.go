@@ -64,6 +64,11 @@ func projectCmd() *cobra.Command {
 				return err
 			}
 			root := review.ProjectRoot(abs)
+			if force, _ := cmd.Flags().GetBool("force"); !force {
+				if err := checkProjectRoot(root); err != nil {
+					return err
+				}
+			}
 			c, err := config.Load()
 			if err != nil {
 				return err
@@ -112,6 +117,7 @@ func projectCmd() *cobra.Command {
 		},
 	}
 	initC.Flags().String("name", "", "name shown in the vault (default: folder name)")
+	initC.Flags().Bool("force", false, "allow a folder that is not a git repository")
 
 	list := &cobra.Command{
 		Use:   "list",
@@ -161,6 +167,22 @@ func projectCmd() *cobra.Command {
 	}
 	cmd.AddCommand(initC, list, forget)
 	return cmd
+}
+
+// checkProjectRoot refuses folders that are almost certainly a mistake: the
+// home folder, a filesystem root, or anything that is not a git repository.
+func checkProjectRoot(root string) error {
+	clean := filepath.Clean(root)
+	if clean == filepath.Clean(paths.Home()) {
+		return fmt.Errorf("%s is your home folder, not a project; run this inside a repository", tilde(clean))
+	}
+	if clean == filepath.Dir(clean) {
+		return fmt.Errorf("%s is a filesystem root, not a project", clean)
+	}
+	if _, err := os.Stat(filepath.Join(clean, ".git")); err != nil {
+		return fmt.Errorf("%s is not a git repository; run this in a project folder, or pass --force", tilde(clean))
+	}
+	return nil
 }
 
 func vaultCmd() *cobra.Command {
