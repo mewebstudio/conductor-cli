@@ -26,6 +26,21 @@ var templateFS embed.FS
 var tmpl = template.Must(template.New("").Funcs(template.FuncMap{
 	"label": catalog.ModelLabel,
 	"chain": func(c []string) string { return strings.Join(c, " → ") },
+	"chainModels": func(c *config.Config) string {
+		var parts []string
+		for _, n := range c.Review.Chain {
+			m := c.Reviewer(n).Model
+			if n == "claude" {
+				m = "reviewer agent, " + c.Models.Reviewer.Model
+			}
+			if m != "" {
+				parts = append(parts, n+" ("+m+")")
+			} else {
+				parts = append(parts, n)
+			}
+		}
+		return strings.Join(parts, " → ")
+	},
 	"who": func(c *config.Config) string {
 		if c.Comms.Address != "" {
 			return c.Comms.Address
@@ -285,6 +300,8 @@ var allowRules = []string{
 	"Bash(conductor review run *)",
 	"Bash(conductor ask *)",
 	"Bash(conductor notify *)",
+	"Bash(conductor review)",
+	"Bash(conductor models)",
 	"Bash(printenv CLAUDE_EFFORT)",
 }
 

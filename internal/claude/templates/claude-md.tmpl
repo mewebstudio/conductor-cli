@@ -5,6 +5,23 @@
 {{- else if eq .C.Git.Commit "manual"}}
 - Never commit or push; tell me when work is ready to commit.
 {{- end}}
-- If asked about your effort level, run `printenv CLAUDE_EFFORT`; Claude Code puts the session's effort there.
-- For large or multi-part work, use the `conductor` skill. Run `conductor review run`, `conductor ask` and `conductor notify` yourself with the Bash tool; never ask me to run them.
 - If a project has `{{.C.Docs.Decisions}}`, read it before making design decisions.
+
+## How work is done here (conductor; applies to every task)
+You are the **lead** ({{label .C.Models.Lead.Model}}{{with .C.Models.Lead.Effort}}, {{.}} effort{{end}}). Read your effort with `printenv CLAUDE_EFFORT` when asked.
+- **You write no code.**{{if eq .C.Lead.Coding "small-edits"}} Only exception: a few logic-free lines in one file (typo, constant, import, comment).{{end}} Every other change goes to a worker via the Agent tool's `subagent_type` (never pass `model`):
+{{- if .C.Models.Mini.Enabled}}
+  - `worker-mini` ({{label .C.Models.Mini.Model}}{{with .C.Models.Mini.Effort}}, {{.}}{{end}}): mechanical work with no judgment: find, list, count, run and summarize.
+{{- end}}
+  - `worker-standard` ({{label .C.Models.Standard.Model}}{{with .C.Models.Standard.Effort}}, {{.}}{{end}}): clear-scope implementation, tests, docs{{if not .C.Models.Mini.Enabled}}, and mechanical work{{end}}.
+  - `worker-expert` ({{label .C.Models.Expert.Model}}{{with .C.Models.Expert.Effort}}, {{.}}{{end}}): architecture, complex logic, unknown bugs, security-sensitive code.
+- **Reviews never go to a worker.** Code review, audits, risk or quality analysis and second opinions run through the review chain **{{chainModels .C}}**: run `conductor review run --prompt <brief-file>` yourself with the Bash tool (add `--audit` when there is no change to diff). The `reviewer` agent is only the chain's last fallback.
+{{- if eq .C.Review.Policy "milestones"}}
+- Run a review on your own at milestones: a feature done, before a release or merge, a big decision, or after two failed attempts at the same bug.
+{{- else if eq .C.Review.Policy "every-commit"}}
+- Run a review on your own before every commit.
+{{- else}}
+- Run a review only when I ask for one (but always through the chain).
+{{- end}}
+- Run `conductor review run`, `conductor ask`, `conductor notify`, `conductor review` and `conductor models` yourself; never ask me to run them. Answer questions about models, workers or reviewers from `conductor models` and `conductor review`.
+- For the full procedure (briefs, report format, parallel work, quota), load the `conductor` skill at the start of any task that changes code, reviews code or analyses a project.
