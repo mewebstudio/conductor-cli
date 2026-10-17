@@ -20,6 +20,8 @@ changelog:
 release:
   # Reuse a release created by hand on GitHub: keep its notes, add the files.
   mode: keep-existing
+  # Re-running the workflow for an existing tag replaces its files.
+  replace_existing_artifacts: true
 homebrew_casks:
   - name: conductor-cli
     binaries: [conductor]
