@@ -217,12 +217,67 @@ func applySettings(c *config.Config, hookCmd string) (Change, error) {
 	if hookCmd != "" {
 		setSyncHook(obj, hookCmd, c.Sync.Auto)
 	}
+	setPermissions(obj, true)
 	data, err := ojson.Marshal(obj)
 	if err != nil {
 		return Change{}, err
 	}
 	res, err := fsutil.WriteIfChanged(SettingsPath(), data, 0o644)
 	return Change{SettingsPath(), res.String()}, err
+}
+
+// allowRules let the lead run conductor's own read-only helpers without a
+// permission prompt; nothing else is allowed.
+var allowRules = []string{
+	"Bash(conductor review run *)",
+	"Bash(conductor ask *)",
+	"Bash(conductor notify *)",
+	"Bash(echo $CLAUDE_EFFORT)",
+}
+
+// setPermissions adds (or removes) conductor's rules in permissions.allow,
+// leaving every other rule untouched.
+func setPermissions(settings *ojson.Object, add bool) {
+	pv, _ := settings.Get("permissions")
+	perms, ok := pv.(*ojson.Object)
+	if !ok {
+		if !add {
+			return
+		}
+		perms = &ojson.Object{}
+		settings.Set("permissions", perms)
+	}
+	av, _ := perms.Get("allow")
+	list, _ := av.([]any)
+	ours := map[string]bool{}
+	for _, r := range allowRules {
+		ours[r] = true
+	}
+	var kept []any
+	have := map[string]bool{}
+	for _, v := range list {
+		r, _ := v.(string)
+		if ours[r] && !add {
+			continue
+		}
+		have[r] = true
+		kept = append(kept, v)
+	}
+	if add {
+		for _, r := range allowRules {
+			if !have[r] {
+				kept = append(kept, r)
+			}
+		}
+	}
+	if len(kept) == 0 {
+		perms.Delete("allow")
+	} else {
+		perms.Set("allow", kept)
+	}
+	if len(perms.Members) == 0 {
+		settings.Delete("permissions")
+	}
 }
 
 // isSyncHook recognises the hook entry conductor installs.
@@ -400,6 +455,7 @@ func Uninstall(resetModel bool) ([]Change, error) {
 	}
 	if raw != nil {
 		setSyncHook(obj, "", false)
+		setPermissions(obj, false)
 		if resetModel {
 			obj.Delete("model")
 			obj.Delete("effortLevel")

@@ -34,7 +34,8 @@ Pick with the Agent tool's `subagent_type`. Do **not** pass `model`; each agent'
 - **`worker-mini`** ({{label .C.Models.Mini.Model}}{{with .C.Models.Mini.Effort}} · {{.}}{{end}}) — mechanical work with no judgment: find, list or count files, grep, run a given command and summarize its output, rename or format by an explicit list.
 {{- end}}
 - **`worker-standard`** ({{label .C.Models.Standard.Model}}{{with .C.Models.Standard.Effort}} · {{.}}{{end}}) — {{if not .C.Models.Mini.Enabled}}mechanical work, plus {{end}}clear-scope implementation, code that follows an existing design, tests, docs, routine production (icons, screenshots, localization), summaries.
-- **`worker-expert`** ({{label .C.Models.Expert.Model}}{{with .C.Models.Expert.Effort}} · {{.}}{{end}}) — architecture and design decisions, complex logic, concurrency and data layer, bugs with unknown cause, security-sensitive code, reviewing risky changes, choosing between options.
+- **`worker-expert`** ({{label .C.Models.Expert.Model}}{{with .C.Models.Expert.Effort}} · {{.}}{{end}}) — architecture and design decisions, complex logic, concurrency and data layer, bugs with unknown cause, security-sensitive code, choosing between options.
+**Never give review work to a worker.** Code review, audits, risk or quality analysis and second opinions always go through the review chain (§5): `conductor review run`, with `--audit` when there is no change to diff.
 Rule of thumb: no judgment needed → {{if .C.Models.Mini.Enabled}}mini{{else}}standard{{end}}; judgment with a known path → standard; costly mistakes or ambiguity → expert.
 **Escalation:** if a worker's output falls short, give the same task {{if eq .C.Lead.Escalations 0}}to the next tier only with {{who .C}}'s OK{{else}}{{if eq .C.Lead.Escalations 1}}once{{else}}up to {{.C.Lead.Escalations}} times{{end}} to the next tier up ({{if .C.Models.Mini.Enabled}}mini → {{end}}standard → expert){{end}}. Never retry the same tier.
 
@@ -60,8 +61,9 @@ Every brief states: goal and "done" criteria; relevant files (paste the relevant
 {{- end}}
    Messages in {{if eq .C.Git.CommitLanguage "tr"}}Turkish{{else}}English{{end}}.{{if .C.Git.AutoBranch}} On the main branch, create `{{.C.Git.BranchPrefix}}<topic>` first.{{end}} Push: {{if eq .C.Git.Push "auto"}}push after committing{{else if eq .C.Git.Push "ask"}}only after {{who .C}} says so{{else}}never, unless {{who .C}} asks{{end}}.
 3. **Review**{{if eq .C.Review.Policy "manual"}} — only when {{who .C}} asks for one.{{else if eq .C.Review.Policy "every-commit"}} — before every commit.{{else}} — at milestones, or when Claude is stuck on the same bug after two attempts. Not for routine changes, docs or small edits.{{end}}
-   - Write the review brief to a file (what changed, what to look at: correctness, risk, missed cases; acceptance criteria), then run from the project root:
+   - Write the review brief to a file (what changed, what to look at: correctness, risk, missed cases; acceptance criteria), then **run it yourself with the Bash tool** from the project root (never ask {{who .C}} to run it):
      `conductor review run --prompt <brief-file> [--base <ref>]`
+     For an assessment of existing code (risks, quality, "what is wrong here") add `--audit`; the brief says what to look at.
      It tries the chain **{{chain .C.Review.Chain}}** in order and prints `status=ok provider=… output=…`. Read only the output file's findings.
    - If it prints `status=fallback prompt=<file>`, start the **`reviewer`** agent with: "Review according to <file>; reply with findings ordered by severity." It is read-only by design.
    - Reports live in `{{.C.Docs.Reviews}}/` (git-ignored; conductor adds the ignore rule).

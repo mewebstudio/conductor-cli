@@ -59,8 +59,8 @@ func reviewCmd() *cobra.Command {
 	}
 
 	run := &cobra.Command{
-		Use:   "run --prompt <brief-file> [--base <ref>]",
-		Short: "Run the review chain on the current changes (used by the lead)",
+		Use:   "run --prompt <brief-file> [--base <ref>] [--audit]",
+		Short: "Run the review chain on the current changes, or with --audit on existing code (used by the lead)",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			c, err := config.Load()
@@ -70,9 +70,10 @@ func reviewCmd() *cobra.Command {
 			brief, _ := cmd.Flags().GetString("prompt")
 			base, _ := cmd.Flags().GetString("base")
 			chain, _ := cmd.Flags().GetStringSlice("chain")
+			audit, _ := cmd.Flags().GetBool("audit")
 			wd, _ := os.Getwd()
 			res, err := review.Run(cmd.Context(), c, review.Options{
-				Root: review.ProjectRoot(wd), BriefFile: brief, Base: base, Chain: chain,
+				Root: review.ProjectRoot(wd), BriefFile: brief, Base: base, Chain: chain, Audit: audit,
 			})
 			if err != nil {
 				return err
@@ -99,6 +100,7 @@ func reviewCmd() *cobra.Command {
 	run.Flags().String("prompt", "", "file with the lead's review brief (required)")
 	run.Flags().String("base", "HEAD", "git ref to diff against; the working tree is included")
 	run.Flags().StringSlice("chain", nil, "override the chain for this run, e.g. --chain nvidia,claude")
+	run.Flags().Bool("audit", false, "assess existing code (no diff): risks, quality, a second opinion")
 	_ = run.MarkFlagRequired("prompt")
 
 	chain := editFlags(&cobra.Command{

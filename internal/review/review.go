@@ -44,6 +44,7 @@ type Options struct {
 	Base       string // git ref to diff against (working tree included)
 	Chain      []string
 	Capability string // review (default) or ask
+	Audit      bool   // no diff: review the code the brief names (whole repo by default)
 }
 
 // Run walks the chain and returns the first success or a Claude fallback.
@@ -66,7 +67,10 @@ func Run(ctx context.Context, c *config.Config, o Options) (*Result, error) {
 		return nil, err
 	}
 	stamp := time.Now().Format("20060102-150405")
-	diff, untracked := gitChanges(o.Root, o.Base)
+	var diff, untracked string
+	if !o.Audit {
+		diff, untracked = gitChanges(o.Root, o.Base)
+	}
 
 	res := &Result{Status: "failed"}
 	usage := loadUsage()
@@ -78,6 +82,9 @@ func Run(ctx context.Context, c *config.Config, o Options) (*Result, error) {
 			}
 			prompt := filepath.Join(dir, stamp+"-claude.prompt.md")
 			body := buildPrompt(string(brief), o.Base, diff, untracked, false)
+			if o.Audit {
+				body = buildAuditPrompt(string(brief))
+			}
 			if err := os.WriteFile(prompt, []byte(body), 0o644); err != nil {
 				return nil, err
 			}
@@ -93,6 +100,10 @@ func Run(ctx context.Context, c *config.Config, o Options) (*Result, error) {
 			res.Attempts = append(res.Attempts, Attempt{name, "skipped", "does not support review"})
 			continue
 		}
+		if o.Audit && !p.ReadsFiles() {
+			res.Attempts = append(res.Attempts, Attempt{name, "skipped", "cannot read files; audits need file access"})
+			continue
+		}
 		if err := providers.Ready(c, p); err != nil {
 			res.Attempts = append(res.Attempts, Attempt{name, "skipped", err.Error()})
 			continue
@@ -105,6 +116,9 @@ func Run(ctx context.Context, c *config.Config, o Options) (*Result, error) {
 		prompt := filepath.Join(dir, stamp+"-"+name+".prompt.md")
 		out := filepath.Join(dir, stamp+"-"+name+".md")
 		body := buildPrompt(string(brief), o.Base, diff, untracked, p.RepoAccess())
+		if o.Audit {
+			body = buildAuditPrompt(string(brief))
+		}
 		if err := os.WriteFile(prompt, []byte(body), 0o644); err != nil {
 			return nil, err
 		}
@@ -128,6 +142,25 @@ func Run(ctx context.Context, c *config.Config, o Options) (*Result, error) {
 	}
 	return res, nil
 }
+
+// buildAuditPrompt asks for an assessment of existing code (no diff).
+func buildAuditPrompt(brief string) string {
+	return "# Independent code assessment (read-only)\n\n" +
+		"Assess the code in this repository as described below. Read the files yourself. Do not modify any file.\n\n" +
+		"## Brief from the lead\n\n" + strings.TrimSpace(brief) + "\n" + outputFormat
+}
+
+const outputFormat = `
+## Output format
+At most 10 findings, most severe first. For each:
+- severity: high / medium / low
+- location: path:line
+- problem: one or two sentences
+- fix: one or two sentences (no rewritten code)
+
+Focus on correctness, risks, missed cases and the acceptance criteria. Skip style unless it hides a bug.
+If nothing material is wrong, say so plainly. Never invent findings.
+`
 
 func buildPrompt(brief, base, diff, untracked string, repoAccess bool) string {
 	var b strings.Builder
@@ -154,17 +187,7 @@ func buildPrompt(brief, base, diff, untracked string, repoAccess bool) string {
 			b.WriteString("\nNew untracked files (contents not included):\n" + untracked + "\n")
 		}
 	}
-	b.WriteString(`
-## Output format
-At most 10 findings, most severe first. For each:
-- severity: high / medium / low
-- location: path:line
-- problem: one or two sentences
-- fix: one or two sentences (no rewritten code)
-
-Focus on correctness, risks, missed cases and the acceptance criteria. Skip style unless it hides a bug.
-If nothing material is wrong, say so plainly. Never invent findings.
-`)
+	b.WriteString(outputFormat)
 	return b.String()
 }
 

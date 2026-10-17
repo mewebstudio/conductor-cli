@@ -71,6 +71,10 @@ func TestApplyAndUninstallRestoreSettings(t *testing.T) {
 			t.Fatalf("%s is %s right after apply", s.Path, s.Action)
 		}
 	}
+	b, _ := os.ReadFile(SettingsPath())
+	if !strings.Contains(string(b), `"Bash(conductor review run *)"`) {
+		t.Fatalf("allow rule missing:\n%s", b)
+	}
 	model, effort, hook, _ := SettingsState()
 	if model != "claude-opus-5-5" || effort != "high" || !hook {
 		t.Fatalf("settings not applied: %s %s %v", model, effort, hook)

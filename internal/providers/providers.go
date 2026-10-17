@@ -58,6 +58,9 @@ type Provider interface {
 	// RepoAccess is true when the provider can read the repository itself;
 	// otherwise review prompts must carry the diff inline.
 	RepoAccess() bool
+	// ReadsFiles is true when the provider can open repository files on its
+	// own (needed for audits, which carry no diff).
+	ReadsFiles() bool
 	// NeedsKey is true when the provider needs an API key in the credential store.
 	NeedsKey() bool
 	// Check reports why the provider cannot run right now (nil = ready).

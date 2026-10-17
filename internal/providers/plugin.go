@@ -105,6 +105,7 @@ func (p *Plugin) Name() string           { return p.PName }
 func (p *Plugin) Description() string    { return p.Desc }
 func (p *Plugin) Capabilities() []string { return p.Caps }
 func (p *Plugin) RepoAccess() bool       { return p.RepoRead }
+func (p *Plugin) ReadsFiles() bool       { return p.RepoRead }
 func (p *Plugin) NeedsKey() bool         { return p.Key }
 
 func (p *Plugin) binary() (string, error) {

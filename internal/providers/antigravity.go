@@ -100,3 +100,5 @@ func (a *Antigravity) Run(ctx context.Context, r Request) (Status, error) {
 	}
 	return Failed, fmt.Errorf("antigravity failed: %v (see %s)", runErr, logPath(r.OutputFile))
 }
+
+func (*Antigravity) ReadsFiles() bool { return true }

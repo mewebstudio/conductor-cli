@@ -145,3 +145,5 @@ func (n *NVIDIA) Run(ctx context.Context, r Request) (Status, error) {
 	}
 	return OK, os.WriteFile(r.OutputFile, []byte(body.Choices[0].Message.Content+"\n"), 0o644)
 }
+
+func (*NVIDIA) ReadsFiles() bool { return false }

@@ -97,3 +97,5 @@ func (c *Codex) Run(ctx context.Context, r Request) (Status, error) {
 	}
 	return Failed, fmt.Errorf("codex failed: %v (see %s)", runErr, logPath(r.OutputFile))
 }
+
+func (*Codex) ReadsFiles() bool { return true }
