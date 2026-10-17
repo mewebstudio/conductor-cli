@@ -17,7 +17,8 @@ Lead/worker orchestration for [Claude Code](https://claude.com/claude-code), wit
 The command is `conductor`; the package is `conductor-cli` (not to be confused with the Conductor.app cask).
 
 ```bash
-# macOS (Homebrew)
+# macOS / Linux (Homebrew)
+brew tap mewebstudio/tap
 brew install mewebstudio/tap/conductor-cli
 
 # Any OS, from a release archive: put the binary on PATH
