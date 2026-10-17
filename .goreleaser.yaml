@@ -33,7 +33,7 @@ homebrew_casks:
       owner: mewebstudio
       name: homebrew-tap
       branch: main
-      token: '{{ index .Env "HOMEBREW_TAP_TOKEN" }}'
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     hooks:
       post:
         # The binary is not notarized yet; without this macOS Gatekeeper blocks it.
