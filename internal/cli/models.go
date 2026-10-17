@@ -58,6 +58,11 @@ func modelsCmd() *cobra.Command {
 				if agent == "" {
 					agent = "(main session)"
 				}
+				if r.Key == "reviewer" {
+					// Reviews run on the chain; the Claude agent is only its fallback.
+					fmt.Fprintf(w, "review\t(chain)\t%s\t\t%s\n", reviewChainLabel(c), c.Review.Policy)
+					continue
+				}
 				fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", r.Key, agent, role.Model, orDash(role.Effort), state)
 			}
 			return w.Flush()
@@ -339,4 +344,24 @@ func profileCmd() *cobra.Command {
 			return nil
 		},
 	})
+}
+
+// reviewChainLabel shows who reviews, in order: "codex gpt-6.1-sol → …".
+func reviewChainLabel(c *config.Config) string {
+	var parts []string
+	for _, n := range c.Review.Chain {
+		m, e := c.Reviewer(n).Model, c.Reviewer(n).Effort
+		if n == "claude" {
+			m, e = c.Models.Reviewer.Model, c.Models.Reviewer.Effort
+		}
+		p := n
+		if m != "" {
+			p += " " + m
+		}
+		if e != "" {
+			p += " " + e
+		}
+		parts = append(parts, p)
+	}
+	return strings.Join(parts, " → ")
 }
