@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
@@ -23,7 +24,7 @@ func installCmd() *cobra.Command {
 		Long: "Creates ~/.conductor-cli, connects your settings repository, asks for your choices\n" +
 			"(quick or custom), then installs the skill, agents and Claude settings.",
 		Args: cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) (err error) {
 			ctx := cmd.Context()
 			url, _ := cmd.Flags().GetString("config-repo")
 			cpath, _ := cmd.Flags().GetString("config-path")
@@ -58,6 +59,20 @@ func installCmd() *cobra.Command {
 				return err
 			}
 
+			// A first setup that is aborted (Ctrl+C) or fails before the
+			// questions are done must not leave half a settings file behind:
+			// the next install would offer to reuse it and skip the questions.
+			fresh, answered := !config.Exists(), false
+			defer func() {
+				if fresh && !answered {
+					_ = os.Remove(paths.ConfigFile())
+					_ = os.Remove(paths.SkillsFile())
+					if err != nil {
+						ui.Warnf("setup did not finish; no settings were kept. Run `conductor install` again.")
+					}
+				}
+			}()
+
 			reuse := false
 			if config.Exists() {
 				reuse = true
@@ -91,6 +106,7 @@ func installCmd() *cobra.Command {
 					}
 				}
 			}
+			answered = true
 
 			if err := ensureKeys(cmd, interactive); err != nil {
 				return err
