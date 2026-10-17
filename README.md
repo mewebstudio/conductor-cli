@@ -86,6 +86,36 @@ Add `--local` to any change to keep it on this machine only.
 - At Claude session start, missing skills are installed in the background; the session never waits.
 - The agent folder table is generated from [vercel-labs/skills](https://github.com/vercel-labs/skills) (MIT) with `scripts/gen_agents.py`.
 
+## Projects
+
+Run once per repository, from inside it:
+
+```bash
+cd ~/code/my-app
+conductor project init                # name in the vault = folder name
+conductor project init --name MyApp   # or choose the name
+```
+
+It creates only what is missing and never overwrites existing files:
+
+| File | Purpose |
+|---|---|
+| `docs/decisions.md` | Decision log the lead reads before design decisions and appends to (date, decision, why) |
+| `docs/handoff.md` | Where work stopped; the lead updates it before a session ends or near a usage limit |
+| `.conductor.conf` | `test` and `build` commands workers verify with (guessed for Go, Swift, Xcode, npm, Cargo, Python, Gradle; Xcode needs your scheme name), and `protected` folders workers must not modify |
+| `.gitignore` | Adds `/docs/reviews/` (review reports stay on the machine) |
+
+It also registers the project on this machine and, if the vault is on, links its `docs/` into the vault. The new files are not committed; review and commit them yourself.
+
+`init` refuses the home folder, a filesystem root and folders that are not git repositories; `--force` allows a non-git folder on purpose.
+
+```bash
+conductor project list                # registered projects and their vault state
+conductor project forget MyApp        # unregister and remove the vault link
+```
+
+`forget` keeps `docs/` and `.conductor.conf` in the project, since they are your files. If `init` ran in the wrong folder, delete them there yourself.
+
 ## Obsidian vault
 
 `conductor vault set ~/Documents/Conductor` turns on one vault for all projects. Every `conductor project init` links that project's `docs/` folder into `Projects/<name>` (a symlink, or a junction on Windows) and refreshes `Home.md`. Nothing is copied: decisions and handoffs stay in each repository and are committed there; review reports (`docs/reviews/`) stay git-ignored but are visible in the vault. The vault path is stored as `~/…` so it works on every machine; which projects are linked is per machine. Obsidian may not notice edits made outside it right away; reopen the note if needed.
