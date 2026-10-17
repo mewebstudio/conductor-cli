@@ -107,7 +107,7 @@ It creates only what is missing and never overwrites existing files:
 
 It also registers the project on this machine and, if the vault is on, links its `docs/` into the vault. The new files are not committed; review and commit them yourself.
 
-`init` refuses the home folder, a filesystem root and folders that are not git repositories; `--force` allows a non-git folder on purpose.
+`init` works in any project folder, git or not. It only refuses the home folder, a filesystem root and folders above home (such as `/Users`), which are almost always a mistake.
 
 ```bash
 conductor project list                # registered projects and their vault state
