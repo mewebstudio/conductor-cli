@@ -1,0 +1,5 @@
+/dist/
+/conductor
+/conductor.exe
+*.test
+.DS_Store

@@ -1,0 +1,9 @@
+## Working with me (managed by conductor)
+- {{if .C.Comms.Address}}Address me as **{{.C.Comms.Address}}** and reply{{else}}Reply{{end}} in {{if eq .C.Comms.Language "tr"}}Turkish{{else}}English{{end}}. Keep code, comments, file names and commit messages in {{if eq .C.Git.CommitLanguage "tr"}}Turkish{{else}}English{{end}} unless a project says otherwise.
+{{- if eq .C.Git.Commit "ask"}}
+- Never commit or push without my explicit OK. Summarize what would be committed and wait.
+{{- else if eq .C.Git.Commit "manual"}}
+- Never commit or push; tell me when work is ready to commit.
+{{- end}}
+- For large or multi-part work, use the `conductor` skill.
+- If a project has `{{.C.Docs.Decisions}}`, read it before making design decisions.

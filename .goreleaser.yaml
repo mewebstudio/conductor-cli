@@ -1,0 +1,38 @@
+version: 2
+project_name: conductor-cli
+builds:
+  - main: ./cmd/conductor
+    binary: conductor
+    env: [CGO_ENABLED=0]
+    goos: [darwin, linux, windows]
+    goarch: [amd64, arm64]
+    ldflags: ["-s -w -X main.version={{.Version}}"]
+archives:
+  - formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files: [LICENSE, README.md]
+checksum:
+  name_template: checksums.txt
+changelog:
+  use: github
+homebrew_casks:
+  - name: conductor-cli
+    binaries: [conductor]
+    description: "Lead/worker orchestration for Claude Code with independent reviews and skills for every agent"
+    homepage: "https://github.com/mewebstudio/conductor-cli"
+    # Skipped (cask kept in dist/) until the tap token is configured.
+    skip_upload: '{{ if index .Env "HOMEBREW_TAP_TOKEN" }}auto{{ else }}true{{ end }}'
+    repository:
+      owner: mewebstudio
+      name: homebrew-tap
+      branch: main
+      token: '{{ index .Env "HOMEBREW_TAP_TOKEN" }}'
+    hooks:
+      post:
+        # The binary is not notarized yet; without this macOS Gatekeeper blocks it.
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/conductor"]
+          end

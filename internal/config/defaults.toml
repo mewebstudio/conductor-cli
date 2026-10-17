@@ -1,0 +1,93 @@
+# Conductor defaults. Your choices live in ~/.conductor-cli/config/conductor.toml
+# (synced) and ~/.conductor-cli/local.toml (this machine only); both override this file.
+
+profile = "balanced"
+
+[models.lead]
+model = "claude-opus-5-5"
+effort = "high"
+
+[models.mini]
+enabled = true
+model = "claude-haiku-5-5"
+effort = ""
+
+[models.standard]
+enabled = true
+model = "claude-sonnet-5-5"
+effort = "high"
+
+[models.expert]
+enabled = true
+model = "claude-opus-5-5"
+effort = "medium"
+
+[models.reviewer]
+enabled = true
+model = "claude-opus-5-5"
+effort = "medium"
+
+[review]
+# Tried in order; "claude" (the read-only reviewer agent) is the last resort.
+chain = ["codex", "claude"]
+# milestones | manual | every-commit
+policy = "milestones"
+fix_rounds = 1
+
+[reviewers.codex]
+model = "gpt-6.1-sol"
+effort = "medium"
+daily_limit = 4
+
+[reviewers.antigravity]
+model = "gemini-4-argon-medium"
+effort = ""
+daily_limit = 10
+
+[reviewers.nvidia]
+model = ""
+effort = ""
+daily_limit = 20
+
+[providers]
+# Optional providers switched on with `conductor providers enable <name>`.
+enabled = ["codex"]
+
+[git]
+# ask | milestones | every-step | manual
+commit = "ask"
+commit_language = "en"
+# never | ask | auto
+push = "never"
+auto_branch = true
+branch_prefix = "feature/"
+
+[parallel]
+max_workers = 2
+worktrees = true
+
+[lead]
+# strict | small-edits
+coding = "small-edits"
+report_words = 250
+escalations = 1
+
+[comms]
+# en | tr
+language = "en"
+# How agents address you; empty = "the user".
+address = ""
+# off | decisions | all
+notify = "decisions"
+
+[docs]
+decisions = "docs/decisions.md"
+handoff = "docs/handoff.md"
+reviews = "docs/reviews"
+
+[obsidian]
+enabled = false
+vault = ""
+
+[sync]
+auto = true
