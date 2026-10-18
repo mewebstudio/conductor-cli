@@ -34,10 +34,11 @@ homebrew_casks:
       name: homebrew-tap
       branch: main
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
-    hooks:
-      post:
-        # The binary is not notarized yet; without this macOS Gatekeeper blocks it.
-        install: |
-          if OS.mac?
-            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/conductor"]
-          end
+    # The binary is not notarized; without this macOS Gatekeeper blocks it.
+    # postflight_steps (Homebrew 7+) replaces the deprecated Ruby postflight.
+    custom_block: |
+      postflight_steps do
+        on_macos do
+          run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{ "{{" }}staged_path{{ "}}" }}/conductor"]
+        end
+      end

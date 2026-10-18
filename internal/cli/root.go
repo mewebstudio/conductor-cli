@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -51,19 +52,30 @@ type exitCode int
 func (e exitCode) Error() string { return fmt.Sprintf("exit status %d", int(e)) }
 
 // selfPath returns a stable path to this binary for hooks, or "" when running
-// from a temporary build (go run), where a hook would break later.
+// from a temporary build (go run), where a hook would break later. When the
+// binary is also reachable through PATH, that link is preferred over the
+// resolved file: Homebrew installs into a versioned Caskroom folder that
+// `brew upgrade` deletes, while the link in its bin directory keeps working.
 func selfPath() string {
 	p, err := os.Executable()
 	if err != nil {
 		return ""
 	}
+	real := p
 	if r, err := filepath.EvalSymlinks(p); err == nil {
-		p = r
+		real = r
 	}
-	if strings.Contains(p, string(filepath.Separator)+"go-build") {
+	if strings.Contains(real, string(filepath.Separator)+"go-build") {
 		return ""
 	}
-	return p
+	if link, err := exec.LookPath("conductor"); err == nil {
+		if r, err := filepath.EvalSymlinks(link); err == nil && r == real {
+			if abs, err := filepath.Abs(link); err == nil {
+				return abs
+			}
+		}
+	}
+	return real
 }
 
 // apply re-renders Claude files from the current configuration.
